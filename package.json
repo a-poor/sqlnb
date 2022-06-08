@@ -70,6 +70,7 @@
     "@electron-forge/maker-zip": "^6.0.0-beta.57",
     "@electron-forge/plugin-webpack": "6.0.0-beta.57",
     "@marshallofsound/webpack-asset-relocator-loader": "^0.5.0",
+    "@types/prismjs": "^1.26.0",
     "@types/react": "^18.0.12",
     "@types/react-dom": "^18.0.5",
     "@typescript-eslint/eslint-plugin": "^4.0.1",
@@ -85,14 +86,16 @@
     "typescript": "^4.0.2"
   },
   "dependencies": {
-    "@emotion/react": "^11.9.0",
+    "@blueprintjs/core": "^4.4.1",
+    "@blueprintjs/icons": "^4.3.0",
+    "@blueprintjs/table": "^4.2.4",
     "@emotion/styled": "^11.8.1",
     "@fontsource/roboto": "^4.5.7",
-    "@mui/icons-material": "^5.8.3",
-    "@mui/material": "^5.8.3",
     "@tanstack/react-table": "^0.0.1-alpha.0",
     "electron-squirrel-startup": "^1.0.0",
+    "prismjs": "^1.28.0",
     "react": "^18.1.0",
-    "react-dom": "^18.1.0"
+    "react-dom": "^18.1.0",
+    "react-simple-code-editor": "^0.11.2"
   }
 }
