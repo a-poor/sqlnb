@@ -5,6 +5,9 @@ import {
   Alignment,
 } from "@blueprintjs/core";
 import Editor from 'react-simple-code-editor';
+import { createReactEditorJS } from 'react-editor-js';
+
+import { EDITOR_JS_TOOLS } from './tools';
 
 
 export function AppBar() {
@@ -23,23 +26,16 @@ export function AppBar() {
 }
 
 export function AppEditor() {
-  const [code, setCode] = React.useState(
-    `function add(a, b) {\n  return a + b;\n}`
-  );
+  const ReactEditorJS = createReactEditorJS();
+  // const blocks = null;
   return (
-    <Editor
-      value={code}
-      onValueChange={code => setCode(code)}
-      highlight={code => code}
-      // highlight={code => Prism.highlight(code, Prism.languages.js)}
-      padding={10}
-      style={{
-        fontFamily: '"Fira code", "Fira Mono", monospace',
-        fontSize: 12,
-      }}
-    />
+    <>
+      <ReactEditorJS
+        tools={EDITOR_JS_TOOLS}
+        // defaultValue={blocks} 
+      />
+    </>
   );
-
 }
 
 export default function App() {
