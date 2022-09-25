@@ -3,7 +3,7 @@ import { AppShell, Navbar, Header, Title, Text, Button, Tooltip, NavLink, Aside,
 import { IconFolders, IconFolder, IconFile, IconNotebook, IconDatabase, IconSettings, IconDots, IconChevronRight } from '@tabler/icons';
 
 
-const dummyDirContents = [
+const dummyDirContents: (IFileData | IDirectoryData)[] = [
   {name: "data", type: "directory", contents: [
     {name: "_old", type: "directory", contents: [
       {name: "info.txt", type: "file", size: "3.1K"},
@@ -196,32 +196,6 @@ function AppNav() {
 }
 
 
-function AppAside() {
-  return (
-    <MediaQuery smallerThan="sm" styles={{ display: 'none' }}>
-      <Aside p="md" hiddenBreakpoint="sm" width={{ sm: 200, lg: 300 }}>
-        <Text>AppAside</Text>
-      </Aside>
-    </MediaQuery>
-  );
-}
-
-
-function AppHeader() {
-  return (
-    <Header 
-      height={60} 
-      p="xs"
-    >
-      <Title order={3}>
-        SQL-NB
-      </Title>
-      {/* Header content */}
-    </Header>
-  );
-}
-
-
 export interface IShellProps {
   children: React.ReactNode;
 }
@@ -231,8 +205,6 @@ export default function Shell({children}: IShellProps) {
     <AppShell
       padding="md"
       navbar={<AppNav />}
-      // header={<AppHeader />}
-      aside={<AppAside />}
       styles={(theme) => ({
         main: { backgroundColor: theme.colorScheme === 'dark' ? theme.colors.dark[8] : theme.colors.gray[0] },
       })}
