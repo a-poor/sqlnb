@@ -1,31 +1,31 @@
 import React, { useState } from "react";
-import { AppShell, Navbar, Header, Title, Text, Button, Box, NavLink, Aside, MediaQuery, ActionIcon, Stack, Divider, Menu, ScrollArea } from "@mantine/core";
+import { AppShell, Navbar, Header, Title, Text, Button, Tooltip, NavLink, Aside, MediaQuery, ActionIcon, Stack, Divider, Menu, ScrollArea } from "@mantine/core";
 import { IconFolders, IconFolder, IconFile, IconNotebook, IconDatabase, IconSettings, IconDots, IconChevronRight } from '@tabler/icons';
 
 
 const dummyDirContents = [
   {name: "data", type: "directory", contents: [
     {name: "_old", type: "directory", contents: [
-      {name: "info.txt", type: "file"},
+      {name: "info.txt", type: "file", size: "3.1K"},
     ]},
-    {name: "info.txt", type: "file"},
-    {name: "data.json", type: "file"},
+    {name: "info.txt", type: "file", size: "3.1K"},
+    {name: "data.json", type: "file", size: "368B"},
   ]},
   {name: "static", type: "directory", contents: [
-    {name: "logo.jpeg", type: "file"},
-    {name: "logo.png", type: "file"},
+    {name: "logo.jpeg", type: "file", size: "128B"},
+    {name: "logo.png", type: "file", size: "128B"},
   ]},
   {name: "tmp", type: "directory", contents: [
-    {name: "data-1.json", type: "file"},
-    {name: "data-2.json", type: "file"},
-    {name: "data-3.json", type: "file"},
+    {name: "data-1.json", type: "file", size: "128B"},
+    {name: "data-2.json", type: "file", size: "559B"},
+    {name: "data-3.json", type: "file", size: "378B"},
   ]},
-  {name: ".gitignore", type: "file"},
-  {name: "config.json", type: "file"},
-  {name: "eda.sql.nb", type: "file"},
-  {name: "info.txt", type: "file"},
-  {name: "my-notebook.sql.nb", type: "file"},
-  {name: "notebook-1.sql.nb", type: "file"},
+  {name: ".gitignore", type: "file", size: "378B"},
+  {name: "config.json", type: "file", size: "733B"},
+  {name: "eda.sql.nb", type: "file", size: "3.1K"},
+  {name: "info.txt", type: "file", size: "378B"},
+  {name: "my-notebook.sql.nb", type: "file", size: "889B"},
+  {name: "notebook-1.sql.nb", type: "file", size: "559B"},
 ];
 
 enum NavSection {
@@ -44,6 +44,7 @@ interface IFileData {
 function FileNav({name, size}: IFileData) {
   return (
     <NavLink 
+      onDoubleClick={() => alert("Double clicked file: " + name)}
       label={name}
       icon={<IconFile size={16} stroke={1.5}/>}
       description={size ? size : undefined}
@@ -146,14 +147,16 @@ function AppNav() {
             spacing={5}
             align="center"
           >
-            <ActionIcon 
-              onClick={() => activeSection === NavSection.Directory ? setActiveSection(undefined) : setActiveSection(NavSection.Directory)}
-              color={activeSection === NavSection.Directory ? "blue" : undefined}
-              variant={activeSection === NavSection.Directory ? "light" : "subtle"}
-              size="xl" 
-            >
-              <IconFolders />
-            </ActionIcon>
+            <Tooltip label="Explorer">
+              <ActionIcon 
+                onClick={() => activeSection === NavSection.Directory ? setActiveSection(undefined) : setActiveSection(NavSection.Directory)}
+                color={activeSection === NavSection.Directory ? "blue" : undefined}
+                variant={activeSection === NavSection.Directory ? "light" : "subtle"}
+                size="xl" 
+              >
+                <IconFolders />
+              </ActionIcon>
+            </Tooltip>
             <ActionIcon 
               onClick={() => activeSection === NavSection.Notebooks ? setActiveSection(undefined) : setActiveSection(NavSection.Notebooks)}
               color={activeSection === NavSection.Notebooks ? "blue" : undefined}
@@ -228,7 +231,7 @@ export default function Shell({children}: IShellProps) {
     <AppShell
       padding="md"
       navbar={<AppNav />}
-      header={<AppHeader />}
+      // header={<AppHeader />}
       aside={<AppAside />}
       styles={(theme) => ({
         main: { backgroundColor: theme.colorScheme === 'dark' ? theme.colors.dark[8] : theme.colors.gray[0] },
