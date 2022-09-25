@@ -1,28 +1,31 @@
 import React, { useState } from "react";
-import { AppShell, Navbar, Header, Title, Text, Button, Box, NavLink, Aside, MediaQuery, ActionIcon, Stack, Divider, Breadcrumbs, Anchor } from "@mantine/core";
-import { IconFolders, IconFolder, IconFile, IconNotebook, IconDatabase, IconSettings } from '@tabler/icons';
+import { AppShell, Navbar, Header, Title, Text, Button, Box, NavLink, Aside, MediaQuery, ActionIcon, Stack, Divider, Menu, ScrollArea } from "@mantine/core";
+import { IconFolders, IconFolder, IconFile, IconNotebook, IconDatabase, IconSettings, IconDots, IconChevronRight } from '@tabler/icons';
 
-
-const workingDirectoryPath = [
-  "Users",
-  "austinpoor",
-  "Desktop",
-  "code",
-  "etc",
-  "sqlnb"
-];
 
 const dummyDirContents = [
-  {name: ".git", isDir: true},
-  {name: "data", isDir: true},
-  {name: "static", isDir: true},
-  {name: "tmp", isDir: true},
-  {name: ".gitignore", isDir: false},
-  {name: "config.json", isDir: false},
-  {name: "eda.sql.nb", isDir: false},
-  {name: "info.txt", isDir: false},
-  {name: "my-notebook.sql.nb", isDir: false},
-  {name: "notebook-1.sql.nb", isDir: false},
+  {name: "data", type: "directory", contents: [
+    {name: "_old", type: "directory", contents: [
+      {name: "info.txt", type: "file"},
+    ]},
+    {name: "info.txt", type: "file"},
+    {name: "data.json", type: "file"},
+  ]},
+  {name: "static", type: "directory", contents: [
+    {name: "logo.jpeg", type: "file"},
+    {name: "logo.png", type: "file"},
+  ]},
+  {name: "tmp", type: "directory", contents: [
+    {name: "data-1.json", type: "file"},
+    {name: "data-2.json", type: "file"},
+    {name: "data-3.json", type: "file"},
+  ]},
+  {name: ".gitignore", type: "file"},
+  {name: "config.json", type: "file"},
+  {name: "eda.sql.nb", type: "file"},
+  {name: "info.txt", type: "file"},
+  {name: "my-notebook.sql.nb", type: "file"},
+  {name: "notebook-1.sql.nb", type: "file"},
 ];
 
 enum NavSection {
@@ -32,17 +35,50 @@ enum NavSection {
   Settings,
 }
 
-interface INavDetailsProps {
-  section?: NavSection;
-  dirPath: string[];
-  dirContents: {
-    name: string;
-    isDir: boolean;
-    modified?: Date;
-  }[];
+interface IFileData {
+  type: "file";
+  name: string;
+  size?: string;
 }
 
-function NavDetails({section, dirPath, dirContents}: INavDetailsProps) {
+function FileNav({name, size}: IFileData) {
+  return (
+    <NavLink 
+      label={name}
+      icon={<IconFile size={16} stroke={1.5}/>}
+      description={size ? size : undefined}
+    />
+  );
+}
+
+interface IDirectoryData {
+  type: "directory";
+  name: string;
+  contents: (IDirectoryData | IFileData)[];
+}
+
+function DirNav({name, contents}: IDirectoryData) {
+  return (
+    <NavLink 
+      label={name}
+      icon={<IconFolder size={16} stroke={1.5}/>}
+      // description={d.modified ? d.modified.toLocaleString() : undefined} // TODO - Number of files in directory?
+      childrenOffset={7}
+    >
+      {contents.map((d, i) => (
+        d.type === "directory" ? <DirNav key={i} {...d} /> : <FileNav key={i} {...d} />
+      ))}
+
+    </NavLink>
+  );
+}
+
+interface INavDetailsProps {
+  section?: NavSection;
+  dirContents: (IDirectoryData | IFileData)[];
+}
+
+function NavDetails({section, dirContents}: INavDetailsProps) {
   return (
     <>
       <Divider orientation="vertical" mx="xs" />
@@ -52,34 +88,34 @@ function NavDetails({section, dirPath, dirContents}: INavDetailsProps) {
           flexGrow: 4,
         }}
       >
-        <Text weight={500}>
-          {section === NavSection.Directory && "Directory"}
-          {section === NavSection.Notebooks && "Notebooks"}
-          {section === NavSection.Databases && "Databases"}
-          {section === NavSection.Settings && "Settings"}
-        </Text>
+        <div style={{display: "flex"}}>
+          <Text weight={500}>
+            {section === NavSection.Directory && "Explorer"}
+            {section === NavSection.Notebooks && "Notebooks"}
+            {section === NavSection.Databases && "Databases"}
+            {section === NavSection.Settings && "Settings"}
+          </Text>
+          <div style={{flexGrow: 1}} />
+          <Menu>
+            <Menu.Target>
+              <ActionIcon>
+                <IconDots />
+              </ActionIcon>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Label>Application</Menu.Label>
+              <Menu.Item icon={<IconSettings size={14} />}>Settings</Menu.Item>
+              {/* TODO - Replace this... */}
+            </Menu.Dropdown>
+          </Menu>
+        </div>
         <Divider my="xs" size={1} color="rgba(0,0,0,0.1)" />
 
-        <Breadcrumbs>
-          <Anchor component="button" type="button">
-            ..
-          </Anchor>
-          <Anchor component="button" type="button">
-            {dirPath[dirPath.length - 1]}
-          </Anchor>
-        </Breadcrumbs>
-        <Divider my="xs" size={1} color="rgba(0,0,0,0.1)" />
-
-        <Box>
+        <ScrollArea style={{height: "100%"}} offsetScrollbars>
           {dirContents.map((d, i) => (
-            <NavLink 
-              key={i}
-              label={d.name}
-              icon={d.isDir ? <IconFolder /> : <IconFile />}
-              description={d.modified ? d.modified.toLocaleString() : undefined}
-            />
+            d.type === "directory" ? <DirNav key={i} {...d} /> : <FileNav key={i} {...d} />
           ))}
-        </Box>
+        </ScrollArea>
       </div>
     </>
   );
@@ -148,7 +184,6 @@ function AppNav() {
         {activeSection !== undefined && (
           <NavDetails 
             section={activeSection}
-            dirPath={workingDirectoryPath}
             dirContents={dummyDirContents}
           />
         )}
