@@ -41,7 +41,7 @@ interface IFileData {
   size?: string;
 }
 
-function FileNav({name, size}: IFileData) {
+function FileNavItem({name, size}: IFileData) {
   return (
     <NavLink 
       onDoubleClick={() => alert("Double clicked file: " + name)}
@@ -58,16 +58,15 @@ interface IDirectoryData {
   contents: (IDirectoryData | IFileData)[];
 }
 
-function DirNav({name, contents}: IDirectoryData) {
+function DirNavItem({name, contents}: IDirectoryData) {
   return (
     <NavLink 
       label={name}
       icon={<IconFolder size={16} stroke={1.5}/>}
-      // description={d.modified ? d.modified.toLocaleString() : undefined} // TODO - Number of files in directory?
       childrenOffset={7}
     >
       {contents.map((d, i) => (
-        d.type === "directory" ? <DirNav key={i} {...d} /> : <FileNav key={i} {...d} />
+        d.type === "directory" ? <DirNavItem key={i} {...d} /> : <FileNavItem key={i} {...d} />
       ))}
 
     </NavLink>
@@ -114,7 +113,7 @@ function NavDetails({section, dirContents}: INavDetailsProps) {
 
         <ScrollArea style={{height: "100%"}} offsetScrollbars>
           {dirContents.map((d, i) => (
-            d.type === "directory" ? <DirNav key={i} {...d} /> : <FileNav key={i} {...d} />
+            d.type === "directory" ? <DirNavItem key={i} {...d} /> : <FileNavItem key={i} {...d} />
           ))}
         </ScrollArea>
       </div>
