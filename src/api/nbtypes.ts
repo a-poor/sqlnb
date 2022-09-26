@@ -3,22 +3,15 @@
  */
 export interface INotebook {
     filepath: string;
-    filename: string;
-    connection: IConnection;
+    dbpath: string;
     cells: (IMarkdownCell | IQueryCell)[];
-}
-
-/**
- * SQL connection data.
- */
-export interface IConnection {
 }
 
 /**
  * Content of a markdown cell.
  */
 export interface IMarkdownCell {
-    type: "text";
+    type: "markdown";
     content: string;
 }
 
@@ -28,10 +21,10 @@ export interface IMarkdownCell {
 export interface IQueryCell {
     type: "query";
     query: string;
-    runAt?: Date;
-    runTime?: number;
     results?: {
         [colName: string]: (string | boolean | number | null)[]
     };
+    queryTime?: number;
+    queryError?: string;
 }
 
