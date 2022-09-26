@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { AppShell, Navbar, Header, Title, Text, Button, Tooltip, NavLink, Aside, MediaQuery, ActionIcon, Stack, Divider, Menu, ScrollArea } from "@mantine/core";
-import { IconFolders, IconFolder, IconFile, IconNotebook, IconDatabase, IconSettings, IconDots, IconChevronRight } from '@tabler/icons';
+import { AppShell, Navbar, Text, Tooltip, NavLink, ActionIcon, Stack, Divider, Menu, ScrollArea } from "@mantine/core";
+import { IconFolders, IconFolder, IconFile, IconNotebook, IconDatabase, IconSettings, IconDots } from '@tabler/icons';
 
 
 const dummyDirContents: (IFileData | IDirectoryData)[] = [
@@ -27,6 +27,7 @@ const dummyDirContents: (IFileData | IDirectoryData)[] = [
   {name: "my-notebook.sql.nb", type: "file", size: "889B"},
   {name: "notebook-1.sql.nb", type: "file", size: "559B"},
 ];
+
 
 enum NavSection {
   Directory = 0,
@@ -73,6 +74,155 @@ function DirNavItem({name, contents}: IDirectoryData) {
   );
 }
 
+interface INavDetailsBaseProps {
+  title: string;
+  menu?: React.ReactNode; // Dropdown menu items...
+  children: React.ReactNode;
+}
+
+function NavDetailsBase({title, menu, children}: INavDetailsBaseProps) {
+  return (
+    <>
+      <div style={{display: "flex"}}>
+        <Text weight={500}>
+          { title }
+        </Text>
+        <div style={{flexGrow: 1}} />
+        { menu }
+      </div>
+      <Divider my="xs" size={1} color="rgba(0,0,0,0.1)" />
+      <ScrollArea style={{height: "100%"}} offsetScrollbars>
+        { children }
+      </ScrollArea>
+    </>
+  );
+}
+
+interface INavExplorerDetailsProps {
+  dirContents: (IDirectoryData | IFileData)[];
+}
+
+function NavExplorerDetails({dirContents}: INavExplorerDetailsProps) {
+  return (
+    <NavDetailsBase
+      title="Explorer"
+      menu={
+        <Menu>
+          <Menu.Target>
+            <ActionIcon>
+              <IconDots />
+            </ActionIcon>
+          </Menu.Target>
+          <Menu.Dropdown>
+            <Menu.Label>Application</Menu.Label>
+            <Menu.Item icon={<IconSettings size={14} />}>Settings</Menu.Item>
+            {/* TODO - Replace this... */}
+          </Menu.Dropdown>
+        </Menu>
+      }
+    >
+      {dirContents.map((d, i) => (
+        d.type === "directory" ? <DirNavItem key={i} {...d} /> : <FileNavItem key={i} {...d} />
+      ))}
+    </NavDetailsBase>
+  );
+}
+
+interface INavNotebookDetailsProps {
+  notebooks: {
+    name: string;
+    status: "running" | "stopped";
+  }[];
+}
+
+function NavNotebookDetails({notebooks}: INavNotebookDetailsProps) {
+  return (
+    <NavDetailsBase
+      title="Notebooks"
+      menu={
+        <Menu>
+          <Menu.Target>
+            <ActionIcon>
+              <IconDots />
+            </ActionIcon>
+          </Menu.Target>
+          <Menu.Dropdown>
+            <Menu.Label>Application</Menu.Label>
+            <Menu.Item icon={<IconSettings size={14} />}>Settings</Menu.Item>
+            {/* TODO - Replace this... */}
+          </Menu.Dropdown>
+        </Menu>
+      }
+    >
+      {/* {notebooks.map((d, i) => (
+        d.type === "directory" ? <DirNavItem key={i} {...d} /> : <FileNavItem key={i} {...d} />
+      ))} */}
+    </NavDetailsBase>
+  );
+}
+
+interface INavDbConnectionDetailsProps {
+  connections: {
+    name: string;
+    type: "sqlite" | "postgres";
+    // TODO - Add more details...
+  }[];
+}
+
+function NavDbConnectionDetails({connections}: INavDbConnectionDetailsProps) {
+  return (
+    <NavDetailsBase
+      title="DB Connections"
+      menu={
+        <Menu>
+          <Menu.Target>
+            <ActionIcon>
+              <IconDots />
+            </ActionIcon>
+          </Menu.Target>
+          <Menu.Dropdown>
+            <Menu.Label>Application</Menu.Label>
+            <Menu.Item icon={<IconSettings size={14} />}>Settings</Menu.Item>
+            {/* TODO - Replace this... */}
+          </Menu.Dropdown>
+        </Menu>
+      }
+    >
+      {/* {notebooks.map((d, i) => (
+        d.type === "directory" ? <DirNavItem key={i} {...d} /> : <FileNavItem key={i} {...d} />
+      ))} */}
+    </NavDetailsBase>
+  );
+}
+
+interface INavSettingsDetailsProps {
+  // TODO - Add more details...
+}
+
+function NavSettingsDetails({}: INavSettingsDetailsProps) {
+  return (
+    <NavDetailsBase
+      title="Settings"
+      menu={
+        <Menu>
+          <Menu.Target>
+            <ActionIcon>
+              <IconDots />
+            </ActionIcon>
+          </Menu.Target>
+          <Menu.Dropdown>
+            <Menu.Label>Application</Menu.Label>
+            <Menu.Item icon={<IconSettings size={14} />}>Settings</Menu.Item>
+            {/* TODO - Replace this... */}
+          </Menu.Dropdown>
+        </Menu>
+      }
+    >
+      {/* TODO: ... */}
+    </NavDetailsBase>
+  );
+}
+
 interface INavDetailsProps {
   section?: NavSection;
   dirContents: (IDirectoryData | IFileData)[];
@@ -88,34 +238,10 @@ function NavDetails({section, dirContents}: INavDetailsProps) {
           flexGrow: 4,
         }}
       >
-        <div style={{display: "flex"}}>
-          <Text weight={500}>
-            {section === NavSection.Directory && "Explorer"}
-            {section === NavSection.Notebooks && "Notebooks"}
-            {section === NavSection.Databases && "Databases"}
-            {section === NavSection.Settings && "Settings"}
-          </Text>
-          <div style={{flexGrow: 1}} />
-          <Menu>
-            <Menu.Target>
-              <ActionIcon>
-                <IconDots />
-              </ActionIcon>
-            </Menu.Target>
-            <Menu.Dropdown>
-              <Menu.Label>Application</Menu.Label>
-              <Menu.Item icon={<IconSettings size={14} />}>Settings</Menu.Item>
-              {/* TODO - Replace this... */}
-            </Menu.Dropdown>
-          </Menu>
-        </div>
-        <Divider my="xs" size={1} color="rgba(0,0,0,0.1)" />
-
-        <ScrollArea style={{height: "100%"}} offsetScrollbars>
-          {dirContents.map((d, i) => (
-            d.type === "directory" ? <DirNavItem key={i} {...d} /> : <FileNavItem key={i} {...d} />
-          ))}
-        </ScrollArea>
+        {section === NavSection.Directory && <NavExplorerDetails dirContents={dirContents} />}
+        {section === NavSection.Notebooks && <NavNotebookDetails notebooks={[]} />}
+        {section === NavSection.Databases && <NavDbConnectionDetails connections={[]} />}
+        {section === NavSection.Settings && <NavSettingsDetails />}
       </div>
     </>
   );
@@ -156,30 +282,36 @@ function AppNav() {
                 <IconFolders />
               </ActionIcon>
             </Tooltip>
-            <ActionIcon 
-              onClick={() => activeSection === NavSection.Notebooks ? setActiveSection(undefined) : setActiveSection(NavSection.Notebooks)}
-              color={activeSection === NavSection.Notebooks ? "blue" : undefined}
-              variant={activeSection === NavSection.Notebooks ? "light" : "subtle"}
-              size="xl" 
-            >
-              <IconNotebook />
-            </ActionIcon>
-            <ActionIcon 
-              onClick={() => activeSection === NavSection.Databases ? setActiveSection(undefined) : setActiveSection(NavSection.Databases)}
-              color={activeSection === NavSection.Databases ? "blue" : undefined}
-              variant={activeSection === NavSection.Databases ? "light" : "subtle"}
-              size="xl" 
-            >
-              <IconDatabase />
-            </ActionIcon>
-            <ActionIcon 
-              onClick={() => activeSection === NavSection.Settings ? setActiveSection(undefined) : setActiveSection(NavSection.Settings)}
-              color={activeSection === NavSection.Settings ? "blue" : undefined}
-              variant={activeSection === NavSection.Settings ? "light" : "subtle"}
-              size="xl" 
-            >
-              <IconSettings />
-            </ActionIcon>
+            <Tooltip label="Notebooks">
+              <ActionIcon 
+                onClick={() => activeSection === NavSection.Notebooks ? setActiveSection(undefined) : setActiveSection(NavSection.Notebooks)}
+                color={activeSection === NavSection.Notebooks ? "blue" : undefined}
+                variant={activeSection === NavSection.Notebooks ? "light" : "subtle"}
+                size="xl" 
+              >
+                <IconNotebook />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label="DB Connections">
+              <ActionIcon 
+                onClick={() => activeSection === NavSection.Databases ? setActiveSection(undefined) : setActiveSection(NavSection.Databases)}
+                color={activeSection === NavSection.Databases ? "blue" : undefined}
+                variant={activeSection === NavSection.Databases ? "light" : "subtle"}
+                size="xl" 
+              >
+                <IconDatabase />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label="Settings">
+              <ActionIcon 
+                onClick={() => activeSection === NavSection.Settings ? setActiveSection(undefined) : setActiveSection(NavSection.Settings)}
+                color={activeSection === NavSection.Settings ? "blue" : undefined}
+                variant={activeSection === NavSection.Settings ? "light" : "subtle"}
+                size="xl" 
+              >
+                <IconSettings />
+              </ActionIcon>
+            </Tooltip>
           </Stack>
         </div>
         

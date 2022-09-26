@@ -3,7 +3,30 @@
     windows_subsystem = "windows"
 )]
 
-// Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
+use std::sync::Mutex;
+
+
+struct Notebook {
+    filepath: String,
+    filename: String,
+    cells: Vec<Cell>,
+}
+
+struct MarkdownCell {
+}
+
+struct QueryCell {
+    code: String,
+    output: String,
+}
+
+
+#[derive(Default)]
+struct Connection(Mutex<Option<Client>>);
+struct Client;
+impl Client {}
+
+
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
