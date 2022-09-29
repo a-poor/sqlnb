@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use serde_json::Value;
 use serde::{Serialize, Deserialize};
 
 
@@ -7,7 +6,9 @@ pub struct Client {
     /// Notebooks the client is currently managing.
     /// 
     /// Maps notebook filepaths to notebook objects.
-    pub notebooks: HashMap<String, Box<ActiveNotebook>>,
+    pub notebooks: HashMap<String, ActiveNotebook>,
+
+    pub connections: HashMap<String, Box<sqlite::Connection>>,
 
     /// A counter for creating new notebook IDs.
     /// 
@@ -21,7 +22,8 @@ impl Client {
     pub fn new() -> Client {
         Client {
             notebooks: HashMap::new(),
-            nb_inc: 0,
+            connections: HashMap::new(),
+            nb_inc: 1,
         }
     }
 
@@ -33,20 +35,93 @@ impl Client {
 
     /// Return a new notebook name, using the client's
     /// notebook counter.
-    pub fn get_new_nb_name(&mut self) -> String {
+    fn fmt_new_nb_name(&mut self) -> String {
         // Format the notebook name, using the counter.
         let nb_id = format!("notebook-{}.sql.nb", self.nb_inc);
+
+        // Return the notebook name.
+        nb_id
+    }
+
+    /// Return a new notebook name, using the client's
+    /// notebook counter.
+    pub fn get_new_nb_name(&mut self) -> String {
+        // Format the first name to test
+        let mut name = self.fmt_new_nb_name();
+
+        while self.does_notebook_exist(&name) {
+            // Increment the counter.
+            self.nb_inc += 1;
+
+            // Create a new name
+            name = self.fmt_new_nb_name();
+        }
 
         // Increment the counter.
         self.nb_inc += 1;
 
         // Return the notebook name.
-        nb_id
+        name
     }
+
+    /// Create a new notebook.
+    pub fn create_notebook(&mut self, name: Option<String>) -> String {
+        // Get the notebook name.
+        let nb_name = match name {
+            Some(name) => name,
+            None => self.get_new_nb_name(),
+        };
+
+        // Create the notebook.
+        let nb = ActiveNotebook::new(nb_name.clone());
+
+        // Add the notebook to the client's notebook map.
+        self.notebooks.insert(nb_name.clone(), nb);
+
+        // Return the notebook name.
+        nb_name
+    }
+
+    fn with_conn<F, T>(&self, name: &str, f: F) -> Result<T, String>
+    where
+        F: FnOnce(&sqlite::Connection) -> Result<T, String>,
+    {
+        // Get the connection
+        let conn = self.connections
+            .get(name)
+            .ok_or(format!("No connection named {}", name))?;
+
+
+        // Call the function
+        f(conn)
+    }
+
+    fn get_nb(&self, name: &str) -> Result<&ActiveNotebook, String> {
+        // Get the notebook
+        let nb = self.notebooks
+            .get(name)
+            .ok_or(format!("No notebook named {}", name))?;
+
+        // Return the notebook
+        Ok(nb)
+    }
+
+    // pub fn with_nb<F, T>(&self, name: String, f: F) -> Result<T, String>
+    //     where F: FnOnce(&ActiveNotebook) -> Result<T, String>
+    // {
+    //     // Get the notebook.
+    //     let nb = self.notebooks
+    //         .get(name.as_str());
+
+    //     match nb {
+    //         Some(nb) => f(nb), // Run the function
+    //         None => Err(format!("Notebook '{}' does not exist.", name)),
+    //     }
+    // }
 }
 
 /// A notebook's save-state, on disk.
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum SaveSate {
     /// The notebook has never been saved.
     NeverSaved,
@@ -66,7 +141,7 @@ impl Default for SaveSate {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct ActiveNotebook {
     /// Path to the notebook file.
     /// Also used as it's ID.
@@ -74,9 +149,6 @@ pub struct ActiveNotebook {
 
     /// The notebook data as it is stored on disk
     pub data: Notebook,
-
-    /// A connection to the notebook's SQLite database
-    pub connection: Option<sqlite::Connection>,
 
     /// Should the notebook's connection to the
     /// database be read-only?
@@ -106,6 +178,11 @@ impl ActiveNotebook {
         }
     }
 
+    /// Set the notebook's db path
+    pub fn set_db_path(&mut self, dbpath: String) {
+        self.data.dbpath = Some(dbpath);
+    }
+
     /// Attempts to open a connection to the notebook's
     /// SQLite database.
     /// 
@@ -123,16 +200,11 @@ impl ActiveNotebook {
     /// 
     /// Additionally, the SQLite connection will be opened
     /// with the _create_ and the _full mutex_ `OpenFlag`.
-    pub fn load_db_connection(&mut self) -> Result<(), String> {
+    pub fn create_db_connection(&mut self) -> Result<sqlite::Connection, String> {
         // If the notebook doesn't have a database path,
         // return an error.
         if self.data.dbpath.is_none() {
             return Err("Notebook has no database path".to_string());
-        }
-
-        // If the notebook already has a connection, noop.
-        if self.connection.is_some() {
-            return Ok(());
         }
 
         // Create the SQLite DB connection flags...
@@ -148,46 +220,14 @@ impl ActiveNotebook {
         };
 
         // Open a connection to the notebook's SQLite database.
-        let conn = sqlite::Connection::open_with_flags(&self.nbpath, flags)
+        let conn = sqlite::Connection::open_with_flags(
+            &self.nbpath, 
+            flags,
+        )
             .map_err(|e| e.to_string())?;
 
-        // Set the connection.
-        self.connection = Some(conn);
-
         // Return success.
-        Ok(())
-    }
-
-    /// Attempts to close the notebook's SQLite database connection.
-    /// If the notebook doesn't have a connection, this is a noop.
-    pub fn close_db_connection(&mut self) {
-        // Close the connection.
-        self.connection = None;
-    }
-
-    /// Runs a function using the notebook's SQLite database connection
-    /// and returns the result of that function.
-    /// 
-    /// If the notebook doesn't have a connection, this will attempt to
-    /// open one. If it fails to open a connection (for example, if the
-    /// notebook doesn't have a database path), this will return an error.
-    pub fn run_with_db_connection<F, T>(&mut self, f: F) -> Result<T, String>
-        where F: FnOnce(&mut sqlite::Connection) -> Result<T, String>
-    {
-        // Load the connection if needed.
-        if self.connection.is_none() {
-            self.load_db_connection()?;
-        }
-
-        // Get the connection.
-        let conn = if let Some(conn) = &mut self.connection {
-            conn
-        } else {
-            return Err("Failed to get connection".to_string());
-        };
-
-        // Run the function.
-        f(conn)
+        Ok(conn)
     }
 
     /// Serialize the notebook's data to JSON.
@@ -256,7 +296,7 @@ impl ActiveNotebook {
     }
 
     /// Run a query cell in the notebook.
-    pub fn run_cell(&mut self, pos: usize) -> Result<(), String> {
+    pub fn run_cell(&mut self, pos: usize, conn: &sqlite::Connection) -> Result<(), String> {
         // Check that the position is valid.
         if pos >= self.data.cells.len() {
             return Err("Invalid cell index".to_string());
@@ -270,13 +310,6 @@ impl ActiveNotebook {
             Cell::Query(cell) => {
                 // Get the query
                 let query = cell.query.as_str();
-
-                // Get the db connection
-                let conn = if let Some(conn) = &mut self.connection {
-                    conn
-                } else {
-                    return Err("Failed to get connection".to_string());
-                };
 
                 // Create a place to store the results.
                 let mut results: Vec<HashMap<String, Option<String>>> = Vec::new();
@@ -372,7 +405,7 @@ impl ActiveNotebook {
 
 }
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default, Clone)]
 pub struct Notebook {
     /// Path to the notebook's SQLite database
     pub dbpath: Option<String>,
@@ -391,7 +424,7 @@ impl Notebook {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(tag = "type")]
 pub enum Cell {
     #[serde(rename = "query")]
@@ -456,25 +489,6 @@ impl QueryCell {
 }
 
 
-pub struct DbTable {
-    pub name: String,
-    pub columns: Vec<DbColumn>,
-}
-
-pub struct DbColumn {
-    pub name: String,
-    pub data_type: DbDataType,
-}
-
-pub enum DbDataType {
-    Null,
-    Integer,
-    Real,
-    Text,
-    Blob,
-}
-
-
 #[cfg(test)]
 mod tests {
     #[test]
@@ -498,11 +512,76 @@ mod tests {
         assert_eq!(nb_name, "notebook-2.sql.nb");
     }
 
+    #[test]
+    fn get_new_nb_name_with_skips() {
+        // Create a client instance
+        let mut client = super::Client::new();
+
+        // Create new notebooks (to increment the counter)
+        client.create_notebook(None);
+        client.create_notebook(None);
+
+        // Reset the notebook counter
+        client.nb_inc = 1;
+        
+        // Get another new notebook name
+        let nb_name = client.get_new_nb_name();
+        assert_eq!(nb_name, "notebook-3.sql.nb");
+    }
+
 
     #[test]
     fn new_notebook() {
         let nb = super::Notebook::new();
         assert_eq!(nb.dbpath, None);
         assert_eq!(nb.cells.len(), 0);
+    }
+
+    #[test]
+    fn client_create_nb() {
+        // Create a client instance
+        let mut client = super::Client::new();
+
+        // Create new notebook
+        let nb_name = client.create_notebook(None);
+
+        let nb = client.get_nb(&nb_name).unwrap();
+
+        // Check that the notebook is in the client's list
+        assert_eq!(client.notebooks.len(), 1);
+        assert!(client.does_notebook_exist(nb_name.as_str()));
+
+        // Check that the notebook is empty
+        assert_eq!(nb.data.cells.len(), 0);
+
+        // Check that the notebook doesn't have a database
+        assert_eq!(nb.data.dbpath, None);
+
+        // Check that the notebook is unsaved
+        assert_eq!(nb.save_state, super::SaveSate::NeverSaved);
+
+        // Set the database path
+        nb.set_db_path(":memory:".to_string());
+
+        // // Get the notebook
+        // let res = client.with_nb(nb_name, |nb| {
+        //     // Check that the notebook is in the client's list
+        //     assert_eq!(client.notebooks.len(), 1);
+        //     assert!(client.does_notebook_exist(nb_name.as_str()));
+
+        //     // Check that the notebook is empty
+        //     assert_eq!(nb.data.cells.len(), 0);
+
+        //     // Check that the notebook doesn't have a database
+        //     assert_eq!(nb.data.dbpath, None);
+
+        //     // Check that the notebook is unsaved
+        //     assert_eq!(nb.save_state, super::SaveSate::NeverSaved);
+
+        //     // Set the database path
+        //     nb.set_db_path(":memory:".to_string());
+
+        //     Ok(())
+        // });
     }
 }
